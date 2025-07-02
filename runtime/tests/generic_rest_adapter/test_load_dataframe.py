@@ -136,7 +136,10 @@ async def test_end_to_end_load_dataframe_data_with_timestamp_column():
             assert len(loaded_data) == 1
             assert isinstance(loaded_data["inp_1"], pd.DataFrame)
             assert loaded_data["inp_1"].shape == (3, 2)
-            assert isinstance(loaded_data["inp_1"].index.dtype, pd.DatetimeTZDtype)
+            assert isinstance(loaded_data["inp_1"].index.dtype, pd.DatetimeTZDtype) or (
+                isinstance(loaded_data["inp_1"].index.dtype, pd.ArrowDtype)
+                and str(loaded_data["inp_1"].index.dtype) == "timestamp[ns, tz=UTC][pyarrow]"
+            )
 
 
 @pytest.mark.asyncio

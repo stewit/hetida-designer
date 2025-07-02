@@ -2,11 +2,15 @@ import re
 from io import StringIO
 from uuid import uuid4
 
-import numpy as np
 import pandas as pd
 import pytest
 from fastapi.encoders import jsonable_encoder
-from pandas.api.types import is_bool_dtype, is_datetime64_any_dtype, is_float_dtype
+from pandas.api.types import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_float_dtype,
+    is_integer_dtype,
+)
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from hdutils import (
@@ -222,24 +226,25 @@ def test_parsing_of_null_values():
     test_obj = ExampleObj(s="[null, 1.2, null]")
 
     assert is_float_dtype(test_obj.s.dtype)
-    assert np.isnan(test_obj.s.iloc[0])
-    assert np.isnan(test_obj.s.iloc[2])
+
+    assert pd.isna(test_obj.s.iloc[0])
+    assert pd.isna(test_obj.s.iloc[2])
 
 
-def test_null_in_integers_parses_as_floats():
+def test_null_in_integers_parses_as_ints():
     test_obj = ExampleObj(s="[null, 1, null]")
 
-    assert is_float_dtype(test_obj.s.dtype)
-    assert np.isnan(test_obj.s.iloc[0])
-    assert np.isnan(test_obj.s.iloc[2])
+    assert is_integer_dtype(test_obj.s.dtype)
+    assert pd.isna(test_obj.s.iloc[0])
+    assert pd.isna(test_obj.s.iloc[2])
 
 
-def test_null_in_bool_parses_as_floats():
+def test_null_in_bool_parses_as_bools():
     test_obj = ExampleObj(s="[null, true, null]")
 
-    assert is_float_dtype(test_obj.s.dtype)
-    assert np.isnan(test_obj.s.iloc[0])
-    assert np.isnan(test_obj.s.iloc[2])
+    assert is_bool_dtype(test_obj.s.dtype)
+    assert pd.isna(test_obj.s.iloc[0])
+    assert pd.isna(test_obj.s.iloc[2])
 
 
 def test_null_in_timestamps_parses_as_datetimes():
@@ -253,7 +258,7 @@ def test_null_in_timestamps_parses_as_datetimes():
 def test_parse_series_from_dict_with_null():
     test_obj = ExampleObj(s='{"0": null, "1": 2.4}')
     assert is_float_dtype(test_obj.s.dtype)
-    assert np.isnan(test_obj.s.loc[0])
+    assert pd.isna(test_obj.s.loc[0])
 
 
 def test_dt_index_parsing():
@@ -522,10 +527,14 @@ def test_direct_provisioning_output_handling():
     assert series.dtype == object
     assert series.index.dtype == object
 
-    round_trip_series = pd.read_json(StringIO(series.to_json()), typ="series")
+    round_trip_series = pd.read_json(
+        StringIO(series.to_json()),
+        typ="series",
+        dtype_backend="pyarrow",
+    )
 
     # round trip is not identity
-    assert str(round_trip_series.dtype) == "datetime64[ns, UTC]"
+    assert str(round_trip_series.dtype) == "timestamp[ns, tz=UTC][pyarrow]"
     assert str(round_trip_series.index.dtype) == "datetime64[ns, UTC]"
 
     # So we have an example where a second serialization / deserialization
@@ -533,11 +542,15 @@ def test_direct_provisioning_output_handling():
 
     # Now fix tghis actively by setting some kwargs for read_json:
     round_trip_series_without_inference = pd.read_json(
-        StringIO(series.to_json()), typ="series", convert_axes=False, convert_dates=False
+        StringIO(series.to_json()),
+        typ="series",
+        dtype_backend="pyarrow",
+        convert_axes=False,
+        convert_dates=False,
     )
 
-    assert round_trip_series_without_inference.dtype == object
-    assert round_trip_series_without_inference.index.dtype == object
+    assert str(round_trip_series_without_inference.dtype) == "string[pyarrow]"
+    assert str(round_trip_series_without_inference.index.dtype) == "object"
 
     assert round_trip_series_without_inference.iloc[0] == s
     assert round_trip_series_without_inference.index[0] == s

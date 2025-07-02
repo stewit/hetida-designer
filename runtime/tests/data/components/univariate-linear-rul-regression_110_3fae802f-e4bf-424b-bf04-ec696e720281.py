@@ -29,7 +29,7 @@ def rul_regression_linear(
 
     lg = LinearRegression()
     lg.fit(
-        train_x_diffs.dt.total_seconds().to_numpy().reshape(-1, 1),
+        train_x_diffs.dt.total_seconds().reshape(-1, 1),
         train_series.to_numpy().reshape(-1, 1),
     )
     intercept, slope = lg.intercept_[0], lg.coef_[0].flat[0]
@@ -42,7 +42,7 @@ def rul_regression_linear(
     )
     pred_x_diffs = pd.Series(pred_x_vals - min_timestamp)
     pred_y = pd.Series(
-        lg.predict(pred_x_diffs.dt.total_seconds().to_numpy().reshape(-1, 1)).reshape(
+        lg.predict(pred_x_diffs.dt.total_seconds().reshape(-1, 1)).reshape(
             1, -1
         )[0],
         index=pred_x_vals,

@@ -153,7 +153,11 @@ async def load_framelike_data(  # noqa: PLR0915,PLR0912
             logger.info("Start reading in and parsing framelike data")
 
             try:
-                df: pd.DataFrame = pd.read_json(resp.raw, lines=True)
+                df: pd.DataFrame = pd.read_json(
+                    resp.raw,
+                    lines=True,
+                    dtype_backend="pyarrow",
+                )
             except Exception as e:
                 msg = (
                     f"Could not parse framelike response data from {url} via pd.read_json"

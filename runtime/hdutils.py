@@ -228,15 +228,20 @@ def parse_pandas_data_content(
     try:
         if isinstance(data_content, str):
             parsed_pandas_object = pd.read_json(
-                io.StringIO(data_content), typ=typ, **parsing_options
+                io.StringIO(data_content), typ=typ, dtype_backend="pyarrow", **parsing_options
             )
         else:
-            parsed_pandas_object = pd.read_json(data_content, typ=typ, **parsing_options)
+            parsed_pandas_object = pd.read_json(
+                data_content, typ=typ, dtype_backend="pyarrow", **parsing_options
+            )
 
     except Exception:  # noqa: BLE001
         try:
             parsed_pandas_object = pd.read_json(
-                io.StringIO(json.dumps(data_content)), typ=typ, **parsing_options
+                io.StringIO(json.dumps(data_content)),
+                dtype_backend="pyarrow",
+                typ=typ,
+                **parsing_options,
             )
 
         except Exception as read_json_exception:  # noqa: BLE001
@@ -400,7 +405,14 @@ def validate_multits_properties(  # noqa:PLR0912
     if len(df.index) == 0:
         df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
 
-    if not isinstance(df["timestamp"].dtype, pd.DatetimeTZDtype):
+    if not (
+        isinstance(df["timestamp"].dtype, pd.DatetimeTZDtype)
+        or (
+            isinstance(df["timestamp"].dtype, pd.ArrowDtype)
+            and str(df["timestamp"].dtype).endswith("[pyarrow]")
+            and str(df["timestamp"].dtype).startswith("timestamp[ns, tz=")
+        )
+    ):
         raise ValueError(
             "Column 'timestamp' of MultiTSFrame does not have DatetimeTZDtype dtype. "
             f"Got {str(df['timestamp'].dtype)} index dtype instead."
