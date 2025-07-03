@@ -12,7 +12,7 @@ series.
 '-1min', or '2days'.
 
 ## Outputs
-* **df_or_series** (Any): Dataframe or series same as the input just with the provided timedelta
+* **df_or_series** (Any): New DataFrame or Series same as the input just with the provided timedelta
 added to each of the indices.
 
 ## Details
@@ -102,7 +102,7 @@ def main(*, df_or_series, timedelta):
     ...                 "2019-08-01T15:20:14",
     ...                 "2019-08-01T15:20:16"
     ...             ]
-                ),
+    ...         ),
     ...     ),
     ...     timedelta = "-4s",
     ... )["df_or_series"]
@@ -113,10 +113,8 @@ def main(*, df_or_series, timedelta):
     dtype: float64
     """
     # write your function code here.
-    df_or_series = pd.DataFrame.from_dict(df_or_series, orient="index")
+    df_or_series = df_or_series.copy()
     df_or_series.index = pd.to_datetime(df_or_series.index)
-    if df_or_series.columns.size < 2:
-        df_or_series = df_or_series.squeeze("columns")
     new_index = df_or_series.index + pd.Timedelta(timedelta)
     df_or_series.index = new_index
     return {"df_or_series": df_or_series}
