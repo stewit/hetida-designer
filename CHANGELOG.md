@@ -1,3 +1,5 @@
+* **BREAKING CHANGE**: direct_provisioning and generis rest adapters import data into Pandas objects with pyarrow backend instead of numpy now. This may break component code and existing workflow, e.g. dtype checks or differing behaviour between both backends.
+
 ## 0.11.4
 * Fix enriched use component code logging and make it part of execution responses. In particular it can be viewed in the test result display.
 
