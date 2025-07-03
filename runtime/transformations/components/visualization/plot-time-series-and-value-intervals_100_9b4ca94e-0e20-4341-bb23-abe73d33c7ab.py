@@ -256,7 +256,7 @@ def main(
     # ***** DO NOT EDIT LINES ABOVE *****
     # write your function code here.
 
-    if series.dtype not in [int, float]:
+    if (series.dtype not in [int, float]) and (str(series.dtype) not in ["double[pyarrow]"]):
         raise ComponentInputValidationException(
             "To display the time series entries,"
             f" their dtype must be float or int, while it is {series.dtype}",

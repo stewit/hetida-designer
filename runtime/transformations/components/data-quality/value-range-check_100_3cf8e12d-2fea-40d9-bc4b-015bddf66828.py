@@ -241,7 +241,9 @@ def main(*, timeseries_data, value_range_dict):
     # ***** DO NOT EDIT LINES ABOVE *****
     # write your function code here.
 
-    if timeseries_data.dtype not in [int, float]:
+    if timeseries_data.dtype not in [int, float] and (
+        str(timeseries_data.dtype) not in ["double[pyarrow]"]
+    ):
         raise ComponentInputValidationException(
             "To determine whether time series entries are in a value range,"
             f" their dtype must be float or int, while it is {timeseries_data.dtype}",
