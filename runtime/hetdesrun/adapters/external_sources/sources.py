@@ -127,7 +127,12 @@ def extract_openmeteo_data(
 
     resulting_multitsframe["latitude"] = dataset["latitude"]
     resulting_multitsframe["longitude"] = dataset["longitude"]
-    return (resulting_multitsframe, key, dataset["latitude"], dataset["longitude"])
+    return (
+        resulting_multitsframe.convert_dtypes(dtype_backend="pyarrow"),
+        key,
+        dataset["latitude"],
+        dataset["longitude"],
+    )
 
 
 def append_dataset(
@@ -369,7 +374,7 @@ async def load_energy_charts_info_prices(
 
     result_df.reset_index(drop=True, inplace=True)  # noqa: PD002
 
-    return result_df
+    return result_df.convert_dtypes(dtype_backend="pyarrow")
 
 
 source_load_functions["energy-charts-info-prices"] = load_energy_charts_info_prices

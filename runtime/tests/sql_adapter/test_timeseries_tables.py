@@ -185,7 +185,9 @@ async def test_column_mapping(three_sqlite_dbs_configured):
     assert len(received_data["inp"]) == 2
     assert {"timestamp", "metric", "value"} == set(received_data["inp"].columns)
 
-    table_content = pd.read_sql("table3", get_sql_adapter_config().sql_databases[-1].connection_url)
+    table_content = pd.read_sql(
+        "table3", get_sql_adapter_config().sql_databases[-1].connection_url, dtype_backend="pyarrow"
+    )
 
     assert {"datetime", "tsid", "measurement_val"} == set(table_content.columns)
     assert len(table_content) == 4
@@ -209,7 +211,9 @@ async def test_column_mapping(three_sqlite_dbs_configured):
         adapter_key="sql-adapter",
     )
 
-    table_content = pd.read_sql("table3", get_sql_adapter_config().sql_databases[-1].connection_url)
+    table_content = pd.read_sql(
+        "table3", get_sql_adapter_config().sql_databases[-1].connection_url, dtype_backend="pyarrow"
+    )
 
     assert {"datetime", "tsid", "measurement_val"} == set(table_content.columns)
     assert len(table_content) == 6
