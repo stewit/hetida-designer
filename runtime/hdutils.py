@@ -1,7 +1,9 @@
+import base64
 import datetime
 import io
 import json
 import logging
+import pickle
 from collections import defaultdict
 from enum import StrEnum
 from types import NoneType, UnionType
@@ -28,6 +30,12 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 MULTITSFRAME_COLUMN_NAMES = ["timestamp", "metric", "value"]
+
+
+def unpickle_from_base64(b64_string: str):
+    """Deserialize an object from a base64-encoded string."""
+    pickled = base64.b64decode(b64_string.encode("utf-8"))
+    return pickle.loads(pickled)
 
 
 class ComponentException(Exception):
@@ -489,6 +497,13 @@ def parse_any(v: Any) -> Any:
                 v[:30] + "..." if len(v) > 10 else v,
             )
             return v
+
+        if (
+            isinstance(parsed_json_object, dict)
+            and set(parsed_json_object.keys()) == {"__hd_wrapped_data_object__", "__data__"}
+            and parsed_json_object["__hd_wrapped_data_object__"] == "pickle.base64"
+        ):
+            return unpickle_from_base64(parsed_json_object["__data__"])
 
         if isinstance(
             parsed_json_object, str

@@ -400,6 +400,70 @@ def to_correct_obj_by_datatype(obj: Any, data_type: DataType) -> Any:
     return parse_obj_as_type(obj, data_type_map[data_type])
 
 
+import base64
+import json
+import pickle
+
+from pydantic import BaseModel, TypeAdapter
+from pydantic_core import PydanticSerializationError
+
+
+def pickle_to_base64(obj) -> str:
+    """Serialize an object to a base64-encoded string."""
+    pickled = pickle.dumps(obj)
+    return base64.b64encode(pickled).decode("utf-8")
+
+
+def unpickle_from_base64(b64_string: str):
+    """Deserialize an object from a base64-encoded string."""
+    pickled = base64.b64decode(b64_string.encode("utf-8"))
+    return pickle.loads(pickled)
+
+
+def pydantic_serialize_to_json_dict(obj: Any) -> Any:
+    adapter = TypeAdapter(Any)
+    return adapter.dump_python(obj, mode="json")
+
+
+def pre_serialize_non_json_serializable_direct_provisioning_object(obj: Any) -> Any:
+    """Ensures that arbitrary objects can be serialized for direct provisioning output.
+
+    Ensures that arbitrary objects can be serialized for direct provisioning
+    output. In particular arbitrary objects (e.g. user custom classes) send via
+    outputs of type ANY.
+
+    Objects that are pydantic serializable are kept as is
+    (if direct subclass of BaseModel) or converted to a json-serializable
+    Python object (e.g. a dict that has Pydantic classes somewhere nested).
+
+    Objects like custom classes that cannot be json-serialized by pydantic are
+    wrapped as
+
+    {
+        "__hd_wrapped_data_object__": "pickle.base64",
+        "__data__": "<base64 string of pickled object>"
+    }
+
+    The result is something pydantic should actually be able to serialize.
+
+    * A pydantic object
+    * something that can be json serialized directly, e.g a (nested) dict / list
+      structure with basic types.
+    * A wrapped pickled->base64 object json as described above.
+
+    """
+
+    if isinstance(obj, BaseModel):
+        return obj
+
+    # if not directly a pydantic object: Try to serialize it as such!
+    try:
+        return pydantic_serialize_to_json_dict(obj)
+    except PydanticSerializationError:
+        # if it cannot be serialized to json, pickle it to base64:
+        return {"__hd_wrapped_data_object__": "pickle.base64", "__data__": pickle_to_base64(obj)}
+
+
 class WorkflowExecutionInfo(BaseModel):
     error: WorkflowExecutionError | None = Field(None, description="error string")
     output_types_by_output_name: dict[str, DataType | None] = Field(
@@ -495,7 +559,8 @@ class WorkflowExecutionInfo(BaseModel):
 
         return {
             outp_name: serializer_funcs_by_type.get(
-                data_type_map[output_datatypes_by_output_name[outp_name]], lambda x: x
+                data_type_map[output_datatypes_by_output_name[outp_name]],
+                pre_serialize_non_json_serializable_direct_provisioning_object,
             )(obj)
             for outp_name, obj in output_results_by_output_name.items()
         }
